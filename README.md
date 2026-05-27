@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Art Admin Panel
 
 A modern admin panel application built with Next.js, TypeScript, and Tailwind CSS.
@@ -75,3 +76,6 @@ public/                # Static assets
 ## License
 
 ISC
+=======
+# art_adminDashboard
+>>>>>>> b5e349a (Initial commit)
