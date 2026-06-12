@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Plus,
   Search,
@@ -39,73 +39,58 @@ import {
 } from "../../components/ui";
 import { motion, AnimatePresence } from "motion/react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
+import { useUploadContext } from "../../contexts/UploadContext";
 
-const videoData = [
-  {
-    id: 1,
-    title: "Introduction to React Hooks",
-    duration: "12:45",
-    status: "Published",
-    thumbnail:
-      "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=225&fit=crop",
-    views: 4230,
-    drm: true,
-  },
-  {
-    id: 2,
-    title: "State Management with Redux",
-    duration: "45:20",
-    status: "Encoding",
-    thumbnail:
-      "https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=400&h=225&fit=crop",
-    views: 0,
-    drm: true,
-  },
-  {
-    id: 3,
-    title: "Advanced CSS Grid Layouts",
-    duration: "22:15",
-    status: "Published",
-    thumbnail:
-      "https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?w=400&h=225&fit=crop",
-    views: 2105,
-    drm: false,
-  },
-  {
-    id: 4,
-    title: "Building a REST API with Node",
-    duration: "38:10",
-    status: "Published",
-    thumbnail:
-      "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400&h=225&fit=crop",
-    views: 1840,
-    drm: true,
-  },
-  {
-    id: 5,
-    title: "TypeScript Fundamentals",
-    duration: "1:05:30",
-    status: "Error",
-    thumbnail:
-      "https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=400&h=225&fit=crop",
-    views: 0,
-    drm: true,
-  },
-  {
-    id: 6,
-    title: "Design Systems with Figma",
-    duration: "28:50",
-    status: "Published",
-    thumbnail:
-      "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=225&fit=crop",
-    views: 5621,
-    drm: false,
-  },
-];
+export interface VideoItem {
+  id: number | string;
+  title: string;
+  duration?: string;
+  status: string;
+  thumbnail?: string;
+  views?: number;
+  drm?: boolean;
+}
 
 export default function VideosPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const { upload } = useUploadContext();
+  const [title, setTitle] = useState("");
+  const [sectionId, setSectionId] = useState("");
+  const [sectionError, setSectionError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [videos, setVideos] = useState<VideoItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const isValidUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value.trim(),
+    );
+
+  useEffect(() => {
+    async function fetchVideos() {
+      try {
+        const token = localStorage.getItem("access_token");
+        const headers: Record<string, string> = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const API_BASE =
+          process.env.NEXT_PUBLIC_API_URL ?? "http://192.168.29.72:8000/api/v1";
+        const res = await fetch(`${API_BASE}/courses/lessons`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          // Assume the API returns an array of videos in `data` or `data.results`
+          setVideos(data.results || data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch videos", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchVideos();
+  }, []);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -166,7 +151,7 @@ export default function VideosPage() {
             exit={{ opacity: 0, y: -10 }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
-            {videoData.map((video) => (
+            {videos.map((video) => (
               <Card
                 key={video.id}
                 className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-none shadow-sm"
@@ -228,7 +213,7 @@ export default function VideosPage() {
                         {video.status}
                       </Badge>
                       <span className="text-[10px] text-muted-foreground">
-                        {video.views.toLocaleString()} views
+                        {(video.views || 0).toLocaleString()} views
                       </span>
                     </div>
                     <span className="text-[10px] text-muted-foreground">
@@ -259,7 +244,7 @@ export default function VideosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {videoData.map((video) => (
+                {videos.map((video) => (
                   <TableRow key={video.id}>
                     <TableCell>
                       <div className="w-16 h-10 rounded bg-muted overflow-hidden relative">
@@ -309,58 +294,110 @@ export default function VideosPage() {
       <Drawer open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
         <DrawerContent className="max-w-xl">
           <DrawerHeader>
-            <DrawerTitle>Upload Content</DrawerTitle>
+            <DrawerTitle>Upload Video</DrawerTitle>
             <DrawerDescription>
-              Upload videos to your library with automatic encoding and
-              protection.
+              File uploads directly to S3 — your server stays fast.
             </DrawerDescription>
           </DrawerHeader>
 
-          <div className="py-6 space-y-8">
-            <div className="border-2 border-dashed border-border rounded-xl p-10 flex flex-col items-center justify-center text-center bg-surface/50 hover:bg-surface transition-colors cursor-pointer group">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform">
-                <CloudUpload size={24} />
+          <div className="py-6 space-y-6">
+            {/* Metadata */}
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Lesson title
+                </label>
+                <Input
+                  className="mt-1"
+                  placeholder="e.g. Introduction to React Hooks"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
               </div>
-              <h4 className="font-semibold">Drop your video here</h4>
-              <p className="text-sm text-muted-foreground mt-1">
-                MP4, MOV, or WEBM up to 2GB
-              </p>
-              <Button size="sm" className="mt-4">
-                Select Files
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Uploading
-              </h4>
-              <div className="p-4 border rounded-xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Video size={18} className="text-primary" />
-                    <span className="text-sm font-medium">
-                      advanced-redux-patterns.mp4
-                    </span>
-                  </div>
-                  <span className="text-xs font-bold text-primary">65%</span>
-                </div>
-                <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: "65%" }}
-                    className="h-full bg-primary"
-                  />
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span>3.2 MB/s • 45s remaining</span>
-                  <span>142 MB of 218 MB</span>
-                </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Section UUID
+                </label>
+                <Input
+                  className="mt-1"
+                  placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
+                  value={sectionId}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSectionId(value);
+                    setSectionError(
+                      value.trim() === "" || isValidUuid(value)
+                        ? ""
+                        : "Section UUID must be a valid UUID.",
+                    );
+                  }}
+                />
+                {sectionError && (
+                  <p className="mt-1 text-xs text-destructive">{sectionError}</p>
+                )}
               </div>
             </div>
+            {/* Drop zone — always shown until an upload is actively blocking */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  const f = e.dataTransfer.files[0];
+                  if (f) setSelectedFile(f);
+                }}
+                onClick={() => fileRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center 
+          justify-center text-center cursor-pointer transition-colors
+          ${dragOver ? "border-primary bg-primary/5" : "border-border hover:bg-surface"}
+          ${selectedFile ? "bg-primary/5 border-primary/50" : ""}`}
+              >
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
+                  {selectedFile ? (
+                    <Video size={24} />
+                  ) : (
+                    <CloudUpload size={24} />
+                  )}
+                </div>
+                <h4 className="font-semibold">
+                  {selectedFile ? selectedFile.name : "Drop your video here"}
+                </h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {selectedFile
+                    ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB`
+                    : "MP4, MOV, or WEBM up to 5 GB"}
+                </p>
+                <Button
+                  size="sm"
+                  className="mt-4"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileRef.current?.click();
+                  }}
+                >
+                  {selectedFile ? "Change file" : "Select file"}
+                </Button>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) setSelectedFile(f);
+                  }}
+                />
+              </div>
 
+            {/* Security toggles — unchanged from your original */}
             <div className="space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Global Security Settings
+                Security settings
               </h4>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -372,7 +409,7 @@ export default function VideosPage() {
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Prevent unauthorized downloads and recording.
+                      Prevent unauthorized downloads.
                     </p>
                   </div>
                   <Switch defaultChecked />
@@ -386,7 +423,7 @@ export default function VideosPage() {
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Overlay user&apos;s email address on the video.
+                      Overlay user email on playback.
                     </p>
                   </div>
                   <Switch defaultChecked />
@@ -397,14 +434,34 @@ export default function VideosPage() {
             <div className="flex gap-3 pt-4 border-t">
               <Button
                 className="flex-1"
-                onClick={() => setIsUploadModalOpen(false)}
-              >
-                Complete Upload
-              </Button>
+                disabled={!title || !sectionId || !selectedFile || !!sectionError || !isValidUuid(sectionId)}
+                onClick={() => {
+                  const trimmedSectionId = sectionId.trim();
+                  if (!isValidUuid(trimmedSectionId)) {
+                    setSectionError("Section UUID must be a valid UUID.");
+                    return;
+                  }
+                  if (selectedFile) {
+                    upload(selectedFile, { sectionId: trimmedSectionId, title });
+                      setSelectedFile(null);
+                      setTitle("");
+                      setSectionId("");
+                      setSectionError("");
+                      if (fileRef.current) fileRef.current.value = "";
+                    }
+                  }}
+                >
+                  Start Upload
+                </Button>
+
               <Button
                 variant="ghost"
                 className="flex-1"
-                onClick={() => setIsUploadModalOpen(false)}
+                onClick={() => {
+                  setIsUploadModalOpen(false);
+                  setSelectedFile(null);
+                  if (fileRef.current) fileRef.current.value = "";
+                }}
               >
                 Cancel
               </Button>

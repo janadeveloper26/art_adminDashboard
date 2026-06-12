@@ -209,38 +209,40 @@ export default function DashboardPage() {
                       x2="0"
                       y2="1"
                     >
-                      <stop offset="5%" stopColor="#6A1B9A" stopOpacity={0.1} />
-                      <stop offset="95%" stopColor="#6A1B9A" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#eab308" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#eab308" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
-                    stroke="#E0E0E0"
+                    stroke="hsl(var(--border))"
                   />
                   <XAxis
                     dataKey="name"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "#757575", fontSize: 12 }}
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "#757575", fontSize: 12 }}
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                     tickFormatter={(value) => `$${value}`}
                   />
                   <Tooltip
                     contentStyle={{
-                      borderRadius: "8px",
-                      border: "none",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                      borderRadius: "12px",
+                      border: "1px solid hsl(var(--border))",
+                      backgroundColor: "hsl(var(--card))",
+                      color: "hsl(var(--foreground))",
+                      boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
                     }}
                   />
                   <Area
                     type="monotone"
                     dataKey="revenue"
-                    stroke="#6A1B9A"
+                    stroke="#eab308"
                     strokeWidth={3}
                     fillOpacity={1}
                     fill="url(#colorRevenue)"
@@ -265,32 +267,34 @@ export default function DashboardPage() {
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
-                    stroke="#E0E0E0"
+                    stroke="hsl(var(--border))"
                   />
                   <XAxis
                     dataKey="name"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "#757575", fontSize: 12 }}
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "#757575", fontSize: 12 }}
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                   />
                   <Tooltip
                     contentStyle={{
-                      borderRadius: "8px",
-                      border: "none",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                      borderRadius: "12px",
+                      border: "1px solid hsl(var(--border))",
+                      backgroundColor: "hsl(var(--card))",
+                      color: "hsl(var(--foreground))",
+                      boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
                     }}
-                    cursor={{ fill: "#F8F6FB" }}
+                    cursor={{ fill: "hsl(var(--muted))" }}
                   />
                   <Bar dataKey="users" radius={[4, 4, 0, 0]}>
                     {growthData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-                        fill={index === 5 ? "#6A1B9A" : "#E9E3F0"}
+                        fill={index === 5 ? "#eab308" : "hsl(var(--muted))"}
                       />
                     ))}
                   </Bar>
