@@ -40,6 +40,8 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { useUploadContext } from "../../contexts/UploadContext";
+import { MOCK_VIDEOS } from "../../lib/mockData";
+import { apiFetch } from "../../lib/api";
 
 export interface VideoItem {
   id: number | string;
@@ -58,33 +60,67 @@ export default function VideosPage() {
   const { upload } = useUploadContext();
   const [title, setTitle] = useState("");
   const [sectionId, setSectionId] = useState("");
-  const [sectionError, setSectionError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const isValidUuid = (value: string) =>
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value.trim(),
-    );
+  const [courses, setCourses] = useState<any[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState("");
+  const [sections, setSections] = useState<any[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(false);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isUploadModalOpen && courses.length === 0) {
+      const loadCourses = async () => {
+        try {
+          setCoursesLoading(true);
+          const data = await apiFetch(`/courses/explore`);
+          setCourses(data.data?.courses || []);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setCoursesLoading(false);
+        }
+      };
+      loadCourses();
+    }
+  }, [isUploadModalOpen, courses.length]);
+
+  useEffect(() => {
+    if (selectedCourseId) {
+      const loadSections = async () => {
+        try {
+          setSectionsLoading(true);
+          setSections([]);
+          setSectionId("");
+          const data = await apiFetch(`/courses/${selectedCourseId}/sections`);
+          const payload = data.data || data;
+          const fetchedSections = payload.sections || payload.results || payload.curriculum || (Array.isArray(payload) ? payload : []);
+          setSections(fetchedSections);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setSectionsLoading(false);
+        }
+      };
+      loadSections();
+    } else {
+      setSections([]);
+      setSectionId("");
+    }
+  }, [selectedCourseId]);
 
   useEffect(() => {
     async function fetchVideos() {
       try {
-        const token = localStorage.getItem("access_token");
-        const headers: Record<string, string> = {};
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-
-        const API_BASE =
-          process.env.NEXT_PUBLIC_API_URL ?? "http://192.168.29.72:8000/api/v1";
-        const res = await fetch(`${API_BASE}/courses/lessons`, { headers });
-        if (res.ok) {
-          const data = await res.json();
-          // Assume the API returns an array of videos in `data` or `data.results`
-          setVideos(data.results || data || []);
-        }
+        const data = await apiFetch(`/courses/lessons`);
+        // Assume the API returns an array of videos in `data` or `data.results`
+        const apiVideos = data.results || data;
+        setVideos(apiVideos && apiVideos.length > 0 ? apiVideos : MOCK_VIDEOS);
       } catch (err) {
         console.error("Failed to fetch videos", err);
+        setVideos(MOCK_VIDEOS);
       } finally {
         setLoading(false);
       }
@@ -314,27 +350,44 @@ export default function VideosPage() {
                   onChange={(e) => setTitle(e.target.value)}
                 />
               </div>
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Section UUID
-                </label>
-                <Input
-                  className="mt-1"
-                  placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
-                  value={sectionId}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSectionId(value);
-                    setSectionError(
-                      value.trim() === "" || isValidUuid(value)
-                        ? ""
-                        : "Section UUID must be a valid UUID.",
-                    );
-                  }}
-                />
-                {sectionError && (
-                  <p className="mt-1 text-xs text-destructive">{sectionError}</p>
-                )}
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">
+                    Course
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={selectedCourseId}
+                    onChange={(e) => setSelectedCourseId(e.target.value)}
+                  >
+                    <option value="">Select a course...</option>
+                    {courses.map((c) => (
+                      <option key={c.id} value={c.id}>{c.title}</option>
+                    ))}
+                  </select>
+                  {coursesLoading && <p className="text-xs text-muted-foreground mt-1">Loading courses...</p>}
+                </div>
+
+                <div className="flex-1">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">
+                    Section
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={sectionId}
+                    onChange={(e) => setSectionId(e.target.value)}
+                    disabled={!selectedCourseId || sectionsLoading || sections.length === 0}
+                  >
+                    <option value="">Select a section...</option>
+                    {sections.map((s) => (
+                      <option key={s.id} value={s.id}>{s.title || s.name}</option>
+                    ))}
+                  </select>
+                  {sectionsLoading && <p className="text-xs text-muted-foreground mt-1">Loading sections...</p>}
+                  {!sectionsLoading && selectedCourseId && sections.length === 0 && (
+                    <p className="text-xs text-destructive mt-1">No sections exist for this course. Please create one in Course Management first.</p>
+                  )}
+                </div>
               </div>
             </div>
             {/* Drop zone — always shown until an upload is actively blocking */}
@@ -434,19 +487,14 @@ export default function VideosPage() {
             <div className="flex gap-3 pt-4 border-t">
               <Button
                 className="flex-1"
-                disabled={!title || !sectionId || !selectedFile || !!sectionError || !isValidUuid(sectionId)}
+                disabled={!title || !sectionId || !selectedFile}
                 onClick={() => {
-                  const trimmedSectionId = sectionId.trim();
-                  if (!isValidUuid(trimmedSectionId)) {
-                    setSectionError("Section UUID must be a valid UUID.");
-                    return;
-                  }
                   if (selectedFile) {
-                    upload(selectedFile, { sectionId: trimmedSectionId, title });
+                    upload(selectedFile, { sectionId, title });
                       setSelectedFile(null);
                       setTitle("");
                       setSectionId("");
-                      setSectionError("");
+                      setSelectedCourseId("");
                       if (fileRef.current) fileRef.current.value = "";
                     }
                   }}

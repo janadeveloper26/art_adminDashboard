@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import "./globals.css";
 import Sidebar from "../components/Sidebar";
 
@@ -21,9 +22,21 @@ export default function RootLayout({
         <Providers>
           <div className="flex h-full w-full">
             <Sidebar />
-            <div className="flex flex-col flex-1 w-full h-full">
-              {/* Top Header Placeholder can go here if needed later */}
-              <main className="flex-1 overflow-y-auto p-4 md:p-8">
+            <div className="flex flex-col flex-1 w-full h-full bg-background">
+              {/* Django Admin Top Header */}
+              <header className="h-14 flex items-center justify-between px-6 bg-primary text-primary-foreground border-b border-border shadow-sm">
+                <div className="text-sm font-medium">
+                  {/* Breadcrumb placeholder or title */}
+                  Administration
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="font-semibold text-[#f5dd5d]">Welcome, admin.</span>
+                  <Link href="/" className="hover:underline text-primary-foreground/80 hover:text-white">View site</Link>
+                  <span className="text-white/20">|</span>
+                  <Link href="/login" className="hover:underline text-primary-foreground/80 hover:text-white">Log out</Link>
+                </div>
+              </header>
+              <main className="flex-1 overflow-y-auto p-6 md:p-8">
                 {children}
               </main>
             </div>

@@ -4,31 +4,31 @@
 
 @layer base {
   :root {
-    /* Light Mode - Elegant Off-white with Midnight/Gold accents */
-    --background: 210 40% 98%;
-    --foreground: 235 35% 10%;
+    /* Django Admin Classic Light Mode */
+    --background: 0 0% 97.3%; /* #f8f8f8 */
+    --foreground: 0 0% 20%; /* #333333 */
     --card: 0 0% 100%;
-    --card-foreground: 235 35% 10%;
+    --card-foreground: 0 0% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 235 35% 10%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 43 96% 56%;
-    --accent-foreground: 235 35% 10%;
+    --popover-foreground: 0 0% 20%;
+    --muted: 0 0% 90%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 199.6 37.6% 41%; /* Django Blue #417690 */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --primary: 235 35% 15%; /* Midnight */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 43 96% 56%; /* Gold */
-    --secondary-foreground: 235 35% 10%;
-    --ring: 43 96% 56%;
-    --radius: 0.75rem;
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --primary: 199.6 37.6% 41%; /* #417690 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 200 42% 63%; /* #79aec8 */
+    --secondary-foreground: 0 0% 100%;
+    --ring: 199.6 37.6% 41%;
+    --radius: 0.5rem;
   }
 
   .dark {
-    /* Dark Mode - True Midnight & Gold */
+    /* Django Admin Classic (Adjusted for dark mode if user wants it, but mostly dark blue) */
     --background: 235 35% 10%;
     --foreground: 210 40% 98%;
     --card: 235 30% 14%;
@@ -37,17 +37,17 @@
     --popover-foreground: 210 40% 98%;
     --muted: 235 25% 18%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 43 96% 56%;
-    --accent-foreground: 235 35% 10%;
+    --accent: 199.6 37.6% 41%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 235 25% 18%;
     --input: 235 25% 18%;
-    --primary: 43 96% 56%; /* Gold */
-    --primary-foreground: 235 35% 10%;
-    --secondary: 235 30% 18%;
+    --primary: 199.6 37.6% 41%; /* #417690 */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 200 42% 63%; /* #79aec8 */
     --secondary-foreground: 210 40% 98%;
-    --ring: 43 96% 56%;
+    --ring: 199.6 37.6% 41%;
   }
 }
 

@@ -40,6 +40,14 @@ import {
   TabsTrigger,
   TabsContent,
 } from "../../components/ui";
+import {
+  CreateCourseDrawer,
+  CreateSectionDrawer,
+  CreateLessonDrawer,
+} from "../../components/CourseForms";
+import { useVideoUpload } from "../../hooks/useVideoUpload";
+import { MOCK_COURSES } from "../../lib/mockData";
+import { apiFetch } from "../../lib/api";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ?? "http://192.168.29.72:8000/api/v1";
@@ -53,27 +61,25 @@ export default function CoursesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const getHeaders = () => {
-    const token = localStorage.getItem("access_token");
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    return headers;
-  };
+  // New states for forms
+  const [isCreateCourseOpen, setIsCreateCourseOpen] = useState(false);
+  const [isCreateSectionOpen, setIsCreateSectionOpen] = useState(false);
+  const [isCreateLessonOpen, setIsCreateLessonOpen] = useState(false);
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+
+  const videoUploader = useVideoUpload();
 
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/courses/explore`, {
-        headers: getHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCourses(data.data?.courses || []);
-      }
+      const data = await apiFetch(`/courses/explore`);
+      const apiCourses = data.data?.courses || data;
+      setCourses(
+        apiCourses && apiCourses.length > 0 ? apiCourses : MOCK_COURSES,
+      );
     } catch (err) {
       console.error("Failed to fetch courses", err);
+      setCourses(MOCK_COURSES);
     } finally {
       setLoading(false);
     }
@@ -91,17 +97,92 @@ export default function CoursesPage() {
     // Fetch full detail for the drawer
     try {
       setDetailLoading(true);
-      const res = await fetch(`${API_BASE}/courses/${course.id}`, {
-        headers: getHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSelectedCourseDetail(data.data);
-      }
+      const data = await apiFetch(`/courses/${course.id}`);
+      setSelectedCourseDetail(
+        data.data || MOCK_COURSES.find((c) => c.id === course.id),
+      );
     } catch (err) {
       console.error(err);
+      setSelectedCourseDetail(MOCK_COURSES.find((c) => c.id === course.id));
     } finally {
       setDetailLoading(false);
+    }
+  };
+
+  const handleCreateCourse = async (data: any) => {
+    try {
+      await apiFetch(`/courses/admin`, {
+        method: "POST",
+        body: JSON.stringify({
+          title: data.title,
+          description: data.description,
+          category_id: data.category_id || null,
+          price: data.price,
+          original_price: data.original_price || null,
+          level: data.level || "BEGINNER",
+          instructor_role: data.instructor_role || "Instructor",
+          is_published: data.is_published ?? false,
+          is_featured: data.is_featured ?? false,
+        }),
+      });
+      alert("Course created successfully!");
+      fetchCourses();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create course.");
+    }
+  };
+
+  const handleCreateSection = async (title: string) => {
+    if (!selectedCourse) return;
+    try {
+      await apiFetch(`/courses/${selectedCourse.id}/sections`, {
+        method: "POST",
+        body: JSON.stringify({ title, order: 0 }),
+      });
+      alert("Section added!");
+      handleRowClick(selectedCourse); // Refresh details
+    } catch (err) {
+      console.error(err);
+      alert("Failed to add section.");
+    }
+  };
+
+  const handleCreateLesson = async (
+    title: string,
+    file: File | null,
+    videoUrl?: string,
+  ) => {
+    if (!activeSectionId) return;
+    try {
+      if (file) {
+        await videoUploader.upload(file, { sectionId: activeSectionId, title });
+        alert("Lesson and video uploaded!");
+      } else if (videoUrl) {
+        await apiFetch(`/courses/lessons/direct`, {
+          method: "POST",
+          body: JSON.stringify({
+            section_id: activeSectionId,
+            title,
+            video_url: videoUrl,
+          }),
+        });
+        alert("Lesson with direct URL added!");
+      } else {
+        await apiFetch(`/courses/lessons`, {
+          method: "POST",
+          body: JSON.stringify({
+            section_id: activeSectionId,
+            title,
+            s3_key: "dummy_key",
+          }),
+        });
+        alert("Lesson added!");
+      }
+      handleRowClick(selectedCourse); // Refresh details
+    } catch (err) {
+      console.error(err);
+      alert("Failed to add lesson.");
     }
   };
 
@@ -116,7 +197,10 @@ export default function CoursesPage() {
             Manage your educational catalog and content.
           </p>
         </div>
-        <Button className="gap-2 self-start sm:self-auto">
+        <Button
+          className="gap-2 self-start sm:self-auto"
+          onClick={() => setIsCreateCourseOpen(true)}
+        >
           <Plus size={18} />
           <span>Create New Course</span>
         </Button>
@@ -366,6 +450,16 @@ export default function CoursesPage() {
                 </TabsContent>
 
                 <TabsContent value="curriculum" className="space-y-4">
+                  <div className="flex justify-end mb-4">
+                    <Button
+                      size="sm"
+                      onClick={() => setIsCreateSectionOpen(true)}
+                      className="gap-2"
+                    >
+                      <Plus size={16} />
+                      Add Section
+                    </Button>
+                  </div>
                   {selectedCourseDetail?.curriculum?.length > 0 ? (
                     selectedCourseDetail.curriculum.map(
                       (section: any, idx: number) => (
@@ -408,6 +502,12 @@ export default function CoursesPage() {
                                 variant="ghost"
                                 size="sm"
                                 className="w-full mt-2 border border-dashed border-border gap-2"
+                                onClick={() => {
+                                  setActiveSectionId(
+                                    section.id || idx.toString(),
+                                  );
+                                  setIsCreateLessonOpen(true);
+                                }}
                               >
                                 <Plus size={14} />
                                 <span>Add Lesson</span>
@@ -455,6 +555,21 @@ export default function CoursesPage() {
           )}
         </DrawerContent>
       </Drawer>
+      <CreateCourseDrawer
+        isOpen={isCreateCourseOpen}
+        onOpenChange={setIsCreateCourseOpen}
+        onSubmit={handleCreateCourse}
+      />
+      <CreateSectionDrawer
+        isOpen={isCreateSectionOpen}
+        onOpenChange={setIsCreateSectionOpen}
+        onSubmit={handleCreateSection}
+      />
+      <CreateLessonDrawer
+        isOpen={isCreateLessonOpen}
+        onOpenChange={setIsCreateLessonOpen}
+        onSubmit={handleCreateLesson}
+      />
     </div>
   );
 }

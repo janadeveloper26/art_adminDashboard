@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useRef, useState } from "react";
+import { apiFetch } from "../lib/api";
 
 export type UploadStatus = "idle" | "uploading" | "saving" | "done" | "error";
 
@@ -95,19 +96,10 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     }));
 
     try {
-      const token = localStorage.getItem("access_token");
-      const headers: Record<string, string> = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      const presignRes = await fetch(
-        `${API_BASE}/courses/presigned-url?` +
-          new URLSearchParams({ filename: file.name, content_type: file.type }),
-        { headers },
-      );
-      if (!presignRes.ok) throw new Error("Could not get upload URL");
-      const {
-        data: { upload_url, s3_key },
-      } = await presignRes.json();
+      // Get Presigned URL
+      const { data: presignedData } = await apiFetch(`/courses/presigned-url?` + new URLSearchParams({ filename: file.name, content_type: file.type }));
+      
+      const { upload_url, s3_key } = presignedData;
 
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -137,9 +129,10 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
       delete xhrRefs.current[id];
 
       patchUpload(id, { status: "saving" });
-      const saveRes = await fetch(`${API_BASE}/courses/lessons`, {
+      
+      // Save lesson directly - with auto publish 
+      const { data: lesson } = await apiFetch(`/courses/lessons`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...headers },
         body: JSON.stringify({
           section_id: opts.sectionId,
           title: opts.title,
@@ -147,10 +140,9 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
           file_size: file.size,
           order: opts.order ?? 0,
           is_preview: opts.isPreview ?? false,
+          status: "Published", // Auto publish as requested
         }),
       });
-      if (!saveRes.ok) throw new Error("Failed to save lesson");
-      const { data: lesson } = await saveRes.json();
 
       patchUpload(id, { progress: 100, status: "done", lesson });
 

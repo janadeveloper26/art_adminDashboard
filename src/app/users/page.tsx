@@ -22,6 +22,7 @@ import {
   TableHead,
   TableCell,
 } from "../../components/ui";
+import { apiFetch } from "../../lib/api";
 
 export interface UserItem {
   id: number | string;
@@ -39,29 +40,11 @@ export default function UsersPage() {
   const [approvingId, setApprovingId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const API_BASE =
-    process.env.NEXT_PUBLIC_API_URL ?? "http://192.168.29.72:8000/api/v1";
-
-  const getHeaders = () => {
-    const token = localStorage.getItem("access_token");
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    return headers;
-  };
-
   const fetchUsers = async () => {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch(`${API_BASE}/users/list`, {
-        headers: getHeaders(),
-      });
-      if (!res.ok) {
-        throw new Error("Failed to fetch users");
-      }
-      const data = await res.json();
+      const data = await apiFetch(`/users/list`);
       setUsers(data.results || data || []);
     } catch (err) {
       console.error(err);
@@ -78,12 +61,9 @@ export default function UsersPage() {
   const handleApprove = async (id: number | string) => {
     try {
       setApprovingId(id);
-      const res = await fetch(`${API_BASE}/users/${id}/approve/`, {
+      await apiFetch(`/users/${id}/approve/`, {
         method: "PATCH",
-        headers: getHeaders(),
       });
-
-      if (!res.ok) throw new Error("Failed to approve user");
 
       // Update local state
       setUsers((prev) =>
@@ -102,7 +82,7 @@ export default function UsersPage() {
   );
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 bg-slate-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
@@ -144,10 +124,10 @@ export default function UsersPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-border bg-white overflow-hidden shadow-sm">
+      <div className="rounded-xl border border-border bg-card text-card-foreground overflow-hidden shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/30">
+            <TableRow className="bg-blue-50/50 dark:bg-blue-900/20">
               <TableHead>Email</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Date Joined</TableHead>

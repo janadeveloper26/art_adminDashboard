@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import Link from "next/link";
+import { apiFetch } from "../../lib/api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -20,28 +21,24 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://192.168.29.72:8000/api/v1"}/auth/admin-login`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: email, password }),
-        },
-      );
+      const json = await apiFetch("/auth/admin-login", {
+        method: "POST",
+        body: JSON.stringify({ username: email, password }),
+      });
 
-      if (!response.ok) {
-        throw new Error("Invalid credentials");
+      const payload = json.data || json;
+      if (payload.access) {
+        localStorage.setItem("access_token", payload.access);
+        if (payload.refresh) {
+          localStorage.setItem("refresh_token", payload.refresh);
+        }
+      } else if (payload.token) {
+        localStorage.setItem("access_token", payload.token);
       }
 
-      const data = await response.json();
-      // Store JWT token (assuming standard simplejwt response format)
-      if (data.access) {
-        localStorage.setItem("access_token", data.access);
-        if (data.refresh) {
-          localStorage.setItem("refresh_token", data.refresh);
-        }
-      } else if (data.token) {
-        localStorage.setItem("access_token", data.token); // Fallback for token auth
+      // We also store admin_token since apiFetch looks for admin_token
+      if (payload.access || payload.token) {
+         localStorage.setItem("admin_token", payload.access || payload.token);
       }
 
       window.location.href = "/dashboard";
